@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redis Real-Time Quiz Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-orb"></div>
+        <div>
+          <h1>Redis Real-Time Quiz</h1>
+          <p class="subtitle">High-Performance Quiz Engine Control & Monitoring Center</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="status-indicator">
+          <span class="pulse-dot" id="sse-status-dot"></span>
+          <span id="sse-status-text">SSE Disconnected</span>
+        </div>
+        <button id="seed-db-btn" class="btn btn-secondary">⚡ Seed Test Data</button>
+      </div>
+    </header>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon">🔥</div>
+        <div>
+          <h3>Global Players</h3>
+          <p id="stat-total-players">0</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🔑</div>
+        <div>
+          <h3>Active Sessions</h3>
+          <p id="stat-total-sessions">0</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📡</div>
+        <div>
+          <h3>Ingested Events</h3>
+          <p id="stat-events-count">0</p>
+        </div>
+      </div>
+    </div>
+
+    <main class="dashboard-grid">
+      <!-- COLUMN 1: Session Management -->
+      <section class="panel-card col-session">
+        <div class="panel-header">
+          <h2>Session Management</h2>
+          <span class="badge">HSET / SET / LUA</span>
+        </div>
+        <div class="panel-body">
+          <form id="create-session-form" class="control-form">
+            <h3>Create User Session</h3>
+            <div class="form-group">
+              <label for="sess-user-id">User ID</label>
+              <input type="text" id="sess-user-id" placeholder="e.g. user-777" required>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="sess-ip">IP Address</label>
+                <input type="text" id="sess-ip" placeholder="192.168.1.1">
+              </div>
+              <div class="form-group">
+                <label for="sess-device">Device Type</label>
+                <select id="sess-device">
+                  <option value="desktop">Desktop</option>
+                  <option value="mobile">Mobile</option>
+                  <option value="tablet">Tablet</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Session</button>
+          </form>
+
+          <hr class="divider">
+
+          <div class="session-lookup-section">
+            <h3>Active Sessions Inspector</h3>
+            <div class="search-input-group">
+              <input type="text" id="inspect-user-id" placeholder="Enter User ID (e.g. user-777)">
+              <button id="inspect-sessions-btn" class="btn btn-secondary">Inspect</button>
+            </div>
+            <div class="sessions-results-container">
+              <p class="placeholder-text" id="sessions-empty-text">No user inspected yet.</p>
+              <div id="inspector-sessions-list" class="sessions-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUMN 2: Leaderboard & Player Stats -->
+      <section class="panel-card col-leaderboard">
+        <div class="panel-header">
+          <h2>Leaderboard Real-Time</h2>
+          <span class="badge">ZADD / ZRANGE / ZREVRANK</span>
+        </div>
+        <div class="panel-body">
+          <div class="leaderboard-tabs">
+            <button class="tab-btn active" id="tab-top10">Top 10 Rankings</button>
+            <button class="tab-btn" id="tab-lookup">Player Statistics</button>
+          </div>
+
+          <div id="tab-content-top10" class="tab-content">
+            <div class="leaderboard-table-container">
+              <table id="leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Player ID</th>
+                    <th class="text-right">Score</th>
+                  </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                  <tr>
+                    <td colspan="3" class="text-center placeholder-text">Leaderboard is empty. Click Seed Test Data!</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="tab-content-lookup" class="tab-content hidden">
+            <div class="search-input-group">
+              <input type="text" id="lookup-player-id" placeholder="Enter Player ID (e.g. player-charlie)">
+              <button id="lookup-player-btn" class="btn btn-secondary">Analyze</button>
+            </div>
+            <div id="player-details-card" class="player-details-card hidden">
+              <div class="player-key-stats">
+                <div class="stats-mini">
+                  <span class="label">Rank</span>
+                  <span class="value" id="player-details-rank">-</span>
+                </div>
+                <div class="stats-mini">
+                  <span class="label">Score</span>
+                  <span class="value" id="player-details-score">-</span>
+                </div>
+                <div class="stats-mini">
+                  <span class="label font-small">Percentile</span>
+                  <span class="value" id="player-details-percentile">-</span>
+                </div>
+              </div>
+              
+              <div class="nearby-players-section">
+                <h4>Nearby Players</h4>
+                <div class="nearby-grid">
+                  <div class="nearby-column">
+                    <h5>Above</h5>
+                    <ul class="nearby-list" id="player-details-above"></ul>
+                  </div>
+                  <div class="nearby-column">
+                    <h5>Below</h5>
+                    <ul class="nearby-list" id="player-details-below"></ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="placeholder-text" id="lookup-empty-text">Enter a player ID to view detailed analysis and percentile.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUMN 3: Game Simulator & Event Ticker -->
+      <section class="panel-card col-simulator">
+        <div class="panel-header">
+          <h2>Game Simulators</h2>
+          <span class="badge">EVAL (LUA) / PUB-SUB</span>
+        </div>
+        <div class="panel-body">
+          <div class="sim-toggle-row">
+            <button class="sub-tab-btn active" id="subtab-score">Submit Points</button>
+            <button class="sub-tab-btn" id="subtab-quiz">Submit Answer (Lua)</button>
+          </div>
+
+          <!-- Score Submission -->
+          <div id="subtab-content-score" class="sub-tab-content">
+            <form id="score-submit-form" class="control-form">
+              <h3>Submit/Increment Score</h3>
+              <div class="form-group">
+                <label for="score-player-id">Player ID</label>
+                <input type="text" id="score-player-id" placeholder="e.g. player-alpha" required>
+              </div>
+              <div class="form-group">
+                <label for="score-points">Add Points</label>
+                <input type="number" id="score-points" value="10" required>
+              </div>
+              <button type="submit" class="btn btn-primary">Process ZINCRBY</button>
+            </form>
+          </div>
+
+          <!-- Answer Submission -->
+          <div id="subtab-content-quiz" class="sub-tab-content hidden">
+            <form id="quiz-submit-form" class="control-form">
+              <h3>Submit Round Answer</h3>
+              <p class="form-note">Uses a Lua script to atomically check round activity & duplicates.</p>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="quiz-game-id">Game ID</label>
+                  <input type="text" id="quiz-game-id" value="g-501" required>
+                </div>
+                <div class="form-group">
+                  <label for="quiz-round-id">Round ID</label>
+                  <select id="quiz-round-id">
+                    <option value="r-3">r-3 (Active Round)</option>
+                    <option value="r-expired">r-expired (Expired Round)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="quiz-player-id">Player ID</label>
+                  <input type="text" id="quiz-player-id" placeholder="e.g. player-bravo" required>
+                </div>
+                <div class="form-group">
+                  <label for="quiz-answer">Answer</label>
+                  <input type="text" id="quiz-answer" value="redis" placeholder="Try 'redis' or 'wrong'">
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">Submit Answer</button>
+            </form>
+          </div>
+
+          <hr class="divider">
+
+          <div class="event-ticker-section">
+            <h3>Live Event Ticker (SSE Broker)</h3>
+            <div id="events-ticker" class="events-ticker"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
