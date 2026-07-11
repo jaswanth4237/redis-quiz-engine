@@ -1,0 +1,51 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Directory for instrumented code coverage downloads
+lib-cov
+coverage
+*.lcov
+
+# Serverless Webpack files
+.webpack/
+
+# Dependency directories (Yarn Plug'n'Play)
+.pnp
+.pnp.js
+
+# Testing
+/verify-endpoints-results/
+
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+*.settings/
+*.sublime-workspace
+.vscode/
+
+# Local configuration files
+.env
+.env.production
+.env.local
+
+# OS Files
+.DS_Store
+Thumbs.db
